@@ -8,13 +8,13 @@ module.exports = {
     inputDir: path.join(__dirname, 'input'),
     input: [
         new ModelkitJsonLoader({
-            file: 'package.json'
+            files: ['package.json']
         }),
         new ModelkitJsLoader({
-            file: 'webpack.config.js'
+            files: ['webpack.config.js']
         }),
         new ModelkitYarnLoader({
-            file: 'yarn.lock'
+            files: ['yarn.lock']
         }),
     ],
     outputDir: path.join(__dirname, 'output'),
@@ -22,8 +22,10 @@ module.exports = {
     plugins: [
         new ModelkitFreezePlugin({
             flags: {
+                'js-1': true,
                 'json-1': true,
-                'common-1': true
+                'common-1': true,
+                'yarn-1': true
             }
         }),
     ]

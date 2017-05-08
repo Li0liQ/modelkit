@@ -1,5 +1,6 @@
-import mkdirp from 'mkdirp';
 import path from 'path';
+import fs from 'fs';
+import mkdirp from 'mkdirp';
 import foreach from 'lodash/foreach';
 import map from 'lodash/map';
 import reduce from 'lodash/reduce';
@@ -13,36 +14,65 @@ export default class Modelkit {
 
     run(config) {
         // Copy the way to handle plugins and provide events from webpack. Later.
-        mkdirp(config.outputDir);
-        foreach(config.input, i => i.doStuff());
 
-        const flags = this.getFlags(config.input);
+        this.readFiles(config);
+        const flags = this.getFlags(config);
         const freezeFlags = this.getFreezeFlags(config.plugins);
         const flagPermutations = getBooleanFlagPermutations(flags, freezeFlags);
         
         // TODO: allow plugins to sort flags the way they want
         const sortedFlags = sortFlags(flagPermutations);
-
-        // TODO: allow plugins to provide additional replacements in filename
-        const getDirName = (i) => config.flagDirName.replace('[id]', i);
         
-        foreach(sortedFlags, (i, index) => {
-            mkdirp(path.join(config.outputDir, getDirName(index)));
-        });
-
+        mkdirp(config.outputDir);
+        
         // Write a plugin that will create a manifest file.
+        const featureFlagsToDirectoryMap = map(sortedFlags, (flagObj, flagIndex) =>
+            ({
+                flags: flagObj,
+                directory: this.getDirectoryByFlag({flagObj, flagIndex, config}),
+            })
+        );
+
+        fs.writeFileSync(
+            path.join(config.outputDir, 'mapping.json'),
+            JSON.stringify(featureFlagsToDirectoryMap, null, 2)
+        );
+
+        foreach(sortedFlags, (flagObj, flagIndex) => {
+            this.applyFlags({flagObj, flagIndex, config});
+        });
     }
 
-    getFlags(input) {
+    applyFlags({flagObj, flagIndex, config}) {
+        const flagCopy = Object.assign({}, flagObj);
+        // TODO: allow plugins to provide additional replacements in filename
+        const flagDirectory = this.getDirectoryByFlag({flagObj, flagIndex, config});
+        const outputDir = path.join(config.outputDir, config.flagDirName.replace('[id]', flagIndex));
+        
+        mkdirp(outputDir);
+        foreach(config.input, i => i.applyFlags(flagCopy, outputDir));
+    }
+
+    getDirectoryByFlag({flagObj, flagIndex, config}) {
+        // TODO: allow plugins to provide additional replacements in filename
+        const result = config.flagDirName.replace('[id]', flagIndex);
+        return result;
+    }
+
+    getFlags(config) {
         // we support only boolean flags for now
         // hence union and returning flag names only works fine
         const flags = union(
             flatten(
-                map(input, i => i.getFlags())
+                map(config.input, i => i.getFlags())
             )
         );
 
         return flags;
+    }
+
+    readFiles(config) {
+        foreach(config.input, i => i.readFiles(config.inputDir));
     }
 
     getFreezeFlags(input) {
