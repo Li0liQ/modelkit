@@ -8,7 +8,32 @@ module.exports = {
     inputDir: path.join(__dirname, 'input'),
     input: [
         new ModelkitJsonLoader({
-            files: ['package.json']
+            files: ['package.json'],
+            changes: [{
+                flag: 'json-1',
+                delete: {
+                    'license': null
+                },
+                update: {
+                    'name': 'json-1-generated name'
+                }
+            }, {
+                flag: 'json-2',
+                delete: {
+                    'dependencies': null
+                },
+                update: {
+                    'json-2': 'You can create fields on the fly',
+                    'json-2.sub': {
+                        'test': 'Even subfields'
+                    }
+                }
+            }, {
+                flag: 'common-2',
+                update: {
+                    'license': 'A creative commons one'
+                }
+            }],
         }),
         new ModelkitJsLoader({
             files: ['webpack.config.js']
