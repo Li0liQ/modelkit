@@ -39,7 +39,39 @@ module.exports = {
             files: ['webpack.config.js']
         }),
         new ModelkitYarnLoader({
-            files: ['yarn.lock']
+            files: ['yarn.lock'],
+            changes: [{
+                flag: 'yarn-1',
+                delete: {
+                    'splain@^0.0.1': null
+                },
+                update: {
+                    'lodash@1.3.x': {
+                        version: '4.0.0',
+                        resolved: 'http://not.existing.address'
+                    }
+                }
+            }, {
+                flag: 'yarn-2',
+                update: {
+                    'splain@^0.0.1':  {
+                        version: '0.0.2',
+                        resolved: 'http://splain.002',
+                        dependencies: {
+                            lodash: '1.3.x'
+                        }
+                    },
+                    'splain@^0.0.2': {
+                        version: '0.0.2',
+                        resolved: 'http://splain.002',
+                        dependencies: {
+                            lodash: '1.3.x'
+                        }
+                    }
+                }
+            }, {
+                flag: 'common-1',
+            }],
         }),
     ],
     outputDir: path.join(__dirname, 'output'),
