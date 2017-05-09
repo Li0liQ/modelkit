@@ -4,6 +4,7 @@ import map from 'lodash/map';
 import flatten from 'lodash/flatten';
 import forEach from 'lodash/forEach';
 import union from 'lodash/union';
+import grasp from 'grasp';
 
 export default class JsLoader {
     constructor(config) {
@@ -11,11 +12,13 @@ export default class JsLoader {
     }
 
     readFiles(inputDir) {
+        const functionSearchPattern = `${this.config.flagFunction}(_str, _bool)`;
+
         this.files = map(this.config.files, (fileName) => {
             const filePath = path.join(inputDir, fileName);
             const source = fs.readFileSync(filePath, 'utf8');
-            // TODO: Read flags
-            const flags = ['js-1', 'js-2', 'common-1'];
+            const foundResult = grasp.search('equery', functionSearchPattern, source);
+            const flags = map(foundResult, i => i.arguments[0].value);
 
             return {
                 fileName,
@@ -37,10 +40,17 @@ export default class JsLoader {
     }
 
     applyFlags(flagObj, outputDir) {
+        const functionSearchPattern = `${this.config.flagFunction}(_str, _bool)`;
+
         forEach(this.files, ({ fileName, source }) => {
+            const result = grasp.replace('equery', functionSearchPattern,
+                (getRaw, node) => JSON.stringify(flagObj[node.arguments[0].value]),
+                source,
+            );
+
             fs.writeFileSync(
                 path.join(outputDir, fileName),
-                source,
+                result,
             );
         });
     }

@@ -36,7 +36,8 @@ module.exports = {
             }],
         }),
         new ModelkitJsLoader({
-            files: ['webpack.config.js']
+            files: ['webpack.config.js'],
+            flagFunction: 'getFlag'
         }),
         new ModelkitYarnLoader({
             files: ['yarn.lock'],

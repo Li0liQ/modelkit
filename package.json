@@ -20,6 +20,7 @@
     "clean": "rimraf ./output"
   },
   "dependencies": {
+    "grasp": "^0.5.0",
     "lodash": "^4.17.4",
     "mkdirp": "^0.5.1",
     "yarn": "^0.23.4"
