@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import map from 'lodash/map';
 import flatten from 'lodash/flatten';
-import foreach from 'lodash/foreach';
+import forEach from 'lodash/forEach';
 import union from 'lodash/union';
 
 export default class JsLoader {
@@ -11,7 +11,7 @@ export default class JsLoader {
     }
 
     readFiles(inputDir) {
-        this.files = map(this.config.files, (fileName, index) => {
+        this.files = map(this.config.files, (fileName) => {
             const filePath = path.join(inputDir, fileName);
             const source = fs.readFileSync(filePath, 'utf8');
             // TODO: Read flags
@@ -29,19 +29,19 @@ export default class JsLoader {
     getFlags() {
         const flags = union(
             flatten(
-                map(this.files, i => i.flags)
-            )
+                map(this.files, i => i.flags),
+            ),
         );
 
         return flags;
     }
 
     applyFlags(flagObj, outputDir) {
-        foreach(this.files, ({ fileName, filePath, flags, source, }) => {
+        forEach(this.files, ({ fileName, source }) => {
             fs.writeFileSync(
                 path.join(outputDir, fileName),
-                source
+                source,
             );
-        })
+        });
     }
-};
+}

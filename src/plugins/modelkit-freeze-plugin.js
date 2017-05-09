@@ -3,11 +3,7 @@ export default class FreezePlugin {
         this.config = config;
     }
 
-    doStuff() {
-        console.log(this.config);
-    }
-
     getFreezeFlags() {
         return this.config.flags;
     }
-};
+}

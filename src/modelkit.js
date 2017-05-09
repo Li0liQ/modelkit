@@ -1,17 +1,14 @@
 import path from 'path';
 import fs from 'fs';
 import mkdirp from 'mkdirp';
-import foreach from 'lodash/foreach';
+import forEach from 'lodash/forEach';
 import map from 'lodash/map';
 import reduce from 'lodash/reduce';
 import flatten from 'lodash/flatten';
 import union from 'lodash/union';
-import { getFlagBits, getBooleanFlagPermutations, sortFlags } from './utils/flag-utils';
+import { getBooleanFlagPermutations, sortFlags } from './utils/flag-utils';
 
 export default class Modelkit {
-    constructor() {
-    }
-
     run(config) {
         // Copy the way to handle plugins and provide events from webpack. Later.
 
@@ -19,41 +16,41 @@ export default class Modelkit {
         const flags = this.getFlags(config);
         const freezeFlags = this.getFreezeFlags(config.plugins);
         const flagPermutations = getBooleanFlagPermutations(flags, freezeFlags);
-        
+
         // TODO: allow plugins to sort flags the way they want
         const sortedFlags = sortFlags(flagPermutations);
-        
+
         mkdirp(config.outputDir);
-        
+
         // Write a plugin that will create a manifest file.
         const featureFlagsToDirectoryMap = map(sortedFlags, (flagObj, flagIndex) =>
             ({
                 flags: flagObj,
-                directory: this.getDirectoryByFlag({flagObj, flagIndex, config}),
-            })
+                directory: this.getDirectoryByFlag({ flagObj, flagIndex, config }),
+            }),
         );
 
         fs.writeFileSync(
             path.join(config.outputDir, 'mapping.json'),
-            JSON.stringify(featureFlagsToDirectoryMap, null, 2)
+            JSON.stringify(featureFlagsToDirectoryMap, null, 2),
         );
 
-        foreach(sortedFlags, (flagObj, flagIndex) => {
-            this.applyFlags({flagObj, flagIndex, config});
+        forEach(sortedFlags, (flagObj, flagIndex) => {
+            this.applyFlags({ flagObj, flagIndex, config });
         });
     }
 
-    applyFlags({flagObj, flagIndex, config}) {
+    applyFlags({ flagObj, flagIndex, config }) {
         const flagCopy = Object.assign({}, flagObj);
         // TODO: allow plugins to provide additional replacements in filename
-        const flagDirectory = this.getDirectoryByFlag({flagObj, flagIndex, config});
-        const outputDir = path.join(config.outputDir, config.flagDirName.replace('[id]', flagIndex));
-        
+        const flagDirectory = this.getDirectoryByFlag({ flagObj, flagIndex, config });
+        const outputDir = path.join(config.outputDir, flagDirectory);
+
         mkdirp(outputDir);
-        foreach(config.input, i => i.applyFlags(flagCopy, outputDir));
+        forEach(config.input, i => i.applyFlags(flagCopy, outputDir));
     }
 
-    getDirectoryByFlag({flagObj, flagIndex, config}) {
+    getDirectoryByFlag({ flagIndex, config }) {
         // TODO: allow plugins to provide additional replacements in filename
         const result = config.flagDirName.replace('[id]', flagIndex);
         return result;
@@ -64,15 +61,15 @@ export default class Modelkit {
         // hence union and returning flag names only works fine
         const flags = union(
             flatten(
-                map(config.input, i => i.getFlags())
-            )
+                map(config.input, i => i.getFlags()),
+            ),
         );
 
         return flags;
     }
 
     readFiles(config) {
-        foreach(config.input, i => i.readFiles(config.inputDir));
+        forEach(config.input, i => i.readFiles(config.inputDir));
     }
 
     getFreezeFlags(input) {
@@ -83,7 +80,7 @@ export default class Modelkit {
         const uniqueFreezeFlags = reduce(
             freezeFlags,
             (agg, i) => Object.assign(agg, i),
-            {}
+            {},
         );
 
         return uniqueFreezeFlags;

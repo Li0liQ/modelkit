@@ -1,18 +1,16 @@
 import fs from 'fs';
 import path from 'path';
 import map from 'lodash/map';
-import flatten from 'lodash/flatten';
 import reduce from 'lodash/reduce';
-import foreach from 'lodash/foreach';
+import forEach from 'lodash/forEach';
 import filter from 'lodash/filter';
-import union from 'lodash/union';
 import isPlainObject from 'lodash/isPlainObject';
 import parse from 'yarn/lib/lockfile/parse';
 import stringify from 'yarn/lib/lockfile/stringify';
 
-// No array support atm. 
+// No array support atm.
 const deleteProperty = (obj, pattern) => {
-    foreach(pattern, (value, key) => {
+    forEach(pattern, (value, key) => {
         const subObj = obj[key];
 
         if (typeof subObj === 'undefined') {
@@ -28,7 +26,7 @@ const deleteProperty = (obj, pattern) => {
 };
 
 const updateProperty = (obj, pattern) => {
-    foreach(pattern, (value, key) => {
+    forEach(pattern, (value, key) => {
         const subObj = obj[key];
 
         if (typeof subObj === 'undefined') {
@@ -51,7 +49,7 @@ export default class YarnLoader {
     }
 
     readFiles(inputDir) {
-        this.files = map(this.config.files, (fileName, index) => {
+        this.files = map(this.config.files, (fileName) => {
             const filePath = path.join(inputDir, fileName);
             const source = fs.readFileSync(filePath, 'utf8')
                 .replace(/\r\n/g, '\n'); // important for yarn parser
@@ -71,7 +69,7 @@ export default class YarnLoader {
     }
 
     applyFlags(flagObj, outputDir) {
-        foreach(this.files, ({ fileName, filePath, source, }) => {
+        forEach(this.files, ({ fileName, filePath, source }) => {
             let json = parse(source, filePath);
             json = reduce(flagObj, (agg, value, key) => {
                 if (!value) {
@@ -97,8 +95,8 @@ export default class YarnLoader {
 
             fs.writeFileSync(
                 path.join(outputDir, fileName),
-                stringify(json, false)
+                stringify(json, false),
             );
-        })
+        });
     }
-};
+}

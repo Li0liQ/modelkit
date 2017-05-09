@@ -1,16 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import map from 'lodash/map';
-import flatten from 'lodash/flatten';
 import reduce from 'lodash/reduce';
-import foreach from 'lodash/foreach';
+import forEach from 'lodash/forEach';
 import filter from 'lodash/filter';
-import union from 'lodash/union';
 import isPlainObject from 'lodash/isPlainObject';
 
-// No array support atm. 
+// No array support atm.
 const deleteProperty = (obj, pattern) => {
-    foreach(pattern, (value, key) => {
+    forEach(pattern, (value, key) => {
         const subObj = obj[key];
 
         if (typeof subObj === 'undefined') {
@@ -26,7 +24,7 @@ const deleteProperty = (obj, pattern) => {
 };
 
 const updateProperty = (obj, pattern) => {
-    foreach(pattern, (value, key) => {
+    forEach(pattern, (value, key) => {
         const subObj = obj[key];
 
         if (typeof subObj === 'undefined') {
@@ -49,7 +47,7 @@ export default class JsonLoader {
     }
 
     readFiles(inputDir) {
-        this.files = map(this.config.files, (fileName, index) => {
+        this.files = map(this.config.files, (fileName) => {
             const filePath = path.join(inputDir, fileName);
             const source = fs.readFileSync(filePath, 'utf8');
 
@@ -68,7 +66,7 @@ export default class JsonLoader {
     }
 
     applyFlags(flagObj, outputDir) {
-        foreach(this.files, ({ fileName, source, }) => {
+        forEach(this.files, ({ fileName, source }) => {
             let json = JSON.parse(source);
 
             json = reduce(flagObj, (agg, value, key) => {
@@ -95,8 +93,8 @@ export default class JsonLoader {
 
             fs.writeFileSync(
                 path.join(outputDir, fileName),
-                JSON.stringify(json, null, 2)
+                JSON.stringify(json, null, 2),
             );
-        })
+        });
     }
-};
+}
