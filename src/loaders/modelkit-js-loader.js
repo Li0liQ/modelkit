@@ -1,9 +1,6 @@
+import * as _ from 'lodash';
 import fs from 'fs';
 import path from 'path';
-import map from 'lodash/map';
-import flatten from 'lodash/flatten';
-import forEach from 'lodash/forEach';
-import union from 'lodash/union';
 import grasp from 'grasp';
 
 export default class JsLoader {
@@ -14,11 +11,11 @@ export default class JsLoader {
     readFiles(inputDir) {
         const functionSearchPattern = `${this.config.flagFunction}(_str, _bool)`;
 
-        this.files = map(this.config.files, (fileName) => {
+        this.files = _.map(this.config.files, (fileName) => {
             const filePath = path.join(inputDir, fileName);
             const source = fs.readFileSync(filePath, 'utf8');
             const foundResult = grasp.search('equery', functionSearchPattern, source);
-            const flags = map(foundResult, i => i.arguments[0].value);
+            const flags = _.map(foundResult, i => i.arguments[0].value);
 
             return {
                 fileName,
@@ -30,9 +27,9 @@ export default class JsLoader {
     }
 
     getFlags() {
-        const flags = union(
-            flatten(
-                map(this.files, i => i.flags),
+        const flags = _.union(
+            _.flatten(
+                _.map(this.files, i => i.flags),
             ),
         );
 
@@ -42,7 +39,7 @@ export default class JsLoader {
     applyFlags(flagObj, outputDir) {
         const functionSearchPattern = `${this.config.flagFunction}(_str, _bool)`;
 
-        forEach(this.files, ({ fileName, source }) => {
+        _.forEach(this.files, ({ fileName, source }) => {
             const result = grasp.replace('equery', functionSearchPattern,
                 (getRaw, node) => JSON.stringify(flagObj[node.arguments[0].value]),
                 source,

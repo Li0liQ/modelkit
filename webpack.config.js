@@ -1,5 +1,7 @@
 const webpack = require('webpack');
 const path = require('path');
+const os = require('os');
+const LodashModuleReplacementPlugin = require('lodash-webpack-plugin');
 const libraryName = 'modelkit';
 const outputFile = libraryName + '.js';
 
@@ -20,11 +22,27 @@ const config = {
       use: {
         loader: 'babel-loader',
         options: {
-          presets: ['env']
+          presets: ['env'],
+          plugins: ['lodash'],
         }
       }
     }]
   },
+  plugins: [
+    new webpack.ContextReplacementPlugin(
+      /node_modules[\/\\]grasp/,
+      path.resolve(__dirname, 'node_modules'),
+      {
+        'grasp-equery': 'grasp-equery',
+        'grasp-squery': 'grasp-squery',
+        'acorn': 'acorn',
+      }
+    ),
+    new LodashModuleReplacementPlugin({
+      'collections': true,
+      'flattening': true,
+    }),
+  ],
   target: 'node'
 };
 

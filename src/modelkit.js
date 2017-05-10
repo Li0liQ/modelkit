@@ -1,11 +1,7 @@
+import * as _ from 'lodash';
 import path from 'path';
 import fs from 'fs';
 import mkdirp from 'mkdirp';
-import forEach from 'lodash/forEach';
-import map from 'lodash/map';
-import reduce from 'lodash/reduce';
-import flatten from 'lodash/flatten';
-import union from 'lodash/union';
 import { getBooleanFlagPermutations, sortFlags } from './utils/flag-utils';
 
 export default class Modelkit {
@@ -23,7 +19,7 @@ export default class Modelkit {
         mkdirp(config.outputDir);
 
         // Write a plugin that will create a manifest file.
-        const featureFlagsToDirectoryMap = map(sortedFlags, (flagObj, flagIndex) =>
+        const featureFlagsToDirectoryMap = _.map(sortedFlags, (flagObj, flagIndex) =>
             ({
                 flags: flagObj,
                 directory: this.getDirectoryByFlag({ flagObj, flagIndex, config }),
@@ -35,7 +31,7 @@ export default class Modelkit {
             JSON.stringify(featureFlagsToDirectoryMap, null, 2),
         );
 
-        forEach(sortedFlags, (flagObj, flagIndex) => {
+        _.forEach(sortedFlags, (flagObj, flagIndex) => {
             this.applyFlags({ flagObj, flagIndex, config });
         });
     }
@@ -47,7 +43,7 @@ export default class Modelkit {
         const outputDir = path.join(config.outputDir, flagDirectory);
 
         mkdirp(outputDir);
-        forEach(config.input, i => i.applyFlags(flagCopy, outputDir));
+        _.forEach(config.input, i => i.applyFlags(flagCopy, outputDir));
     }
 
     getDirectoryByFlag({ flagIndex, config }) {
@@ -59,9 +55,9 @@ export default class Modelkit {
     getFlags(config) {
         // we support only boolean flags for now
         // hence union and returning flag names only works fine
-        const flags = union(
-            flatten(
-                map(config.input, i => i.getFlags()),
+        const flags = _.union(
+            _.flatten(
+                _.map(config.input, i => i.getFlags()),
             ),
         );
 
@@ -69,15 +65,15 @@ export default class Modelkit {
     }
 
     readFiles(config) {
-        forEach(config.input, i => i.readFiles(config.inputDir));
+        _.forEach(config.input, i => i.readFiles(config.inputDir));
     }
 
     getFreezeFlags(input) {
         // TODO: check if there are different values assigned for the same flags.
         // Throw if there are.
-        const freezeFlags = map(input, i => i.getFreezeFlags());
+        const freezeFlags = _.map(input, i => i.getFreezeFlags());
 
-        const uniqueFreezeFlags = reduce(
+        const uniqueFreezeFlags = _.reduce(
             freezeFlags,
             (agg, i) => Object.assign(agg, i),
             {},

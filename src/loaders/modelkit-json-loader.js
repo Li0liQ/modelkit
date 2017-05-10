@@ -1,14 +1,11 @@
+import * as _ from 'lodash';
 import fs from 'fs';
 import path from 'path';
-import map from 'lodash/map';
-import reduce from 'lodash/reduce';
-import forEach from 'lodash/forEach';
-import filter from 'lodash/filter';
 import isPlainObject from 'lodash/isPlainObject';
 
 // No array support atm.
 const deleteProperty = (obj, pattern) => {
-    forEach(pattern, (value, key) => {
+    _.forEach(pattern, (value, key) => {
         const subObj = obj[key];
 
         if (typeof subObj === 'undefined') {
@@ -24,7 +21,7 @@ const deleteProperty = (obj, pattern) => {
 };
 
 const updateProperty = (obj, pattern) => {
-    forEach(pattern, (value, key) => {
+    _.forEach(pattern, (value, key) => {
         const subObj = obj[key];
 
         if (typeof subObj === 'undefined') {
@@ -47,7 +44,7 @@ export default class JsonLoader {
     }
 
     readFiles(inputDir) {
-        this.files = map(this.config.files, (fileName) => {
+        this.files = _.map(this.config.files, (fileName) => {
             const filePath = path.join(inputDir, fileName);
             const source = fs.readFileSync(filePath, 'utf8');
 
@@ -60,21 +57,21 @@ export default class JsonLoader {
     }
 
     getFlags() {
-        const flags = map(this.config.changes, i => i.flag);
+        const flags = _.map(this.config.changes, i => i.flag);
 
         return flags;
     }
 
     applyFlags(flagObj, outputDir) {
-        forEach(this.files, ({ fileName, source }) => {
+        _.forEach(this.files, ({ fileName, source }) => {
             let json = JSON.parse(source);
 
-            json = reduce(flagObj, (agg, value, key) => {
+            json = _.reduce(flagObj, (agg, value, key) => {
                 if (!value) {
                     return agg;
                 }
 
-                const changes = filter(this.config.changes, i => i.flag === key)[0];
+                const changes = _.filter(this.config.changes, i => i.flag === key)[0];
 
                 if (typeof changes === 'undefined') {
                     return agg;
