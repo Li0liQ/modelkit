@@ -2,6 +2,7 @@ const webpack = require('webpack');
 const path = require('path');
 const os = require('os');
 const LodashModuleReplacementPlugin = require('lodash-webpack-plugin');
+const nodeExternals = require('webpack-node-externals');
 const libraryName = 'modelkit';
 const outputFile = libraryName + '.js';
 
@@ -43,7 +44,8 @@ const config = {
       'flattening': true,
     }),
   ],
-  target: 'node'
+  target: 'node',
+  externals: [nodeExternals()]
 };
 
 module.exports = config;
