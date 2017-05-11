@@ -11,7 +11,7 @@ export default class JsLoader {
     readFiles(inputDir) {
         const functionSearchPattern = `${this.config.flagFunction}(_str, _bool)`;
 
-        this.files = _.map(this.config.files, (fileName) => {
+        const files = _.map(this.config.files, (fileName) => {
             const filePath = path.join(inputDir, fileName);
             const source = fs.readFileSync(filePath, 'utf8');
             const foundResult = grasp.search('equery', functionSearchPattern, source);
@@ -24,31 +24,30 @@ export default class JsLoader {
                 source,
             };
         });
+
+        this.files = files;
+
+        return files;
     }
 
-    getFlags() {
-        const flags = _.union(
-            _.flatten(
-                _.map(this.files, i => i.flags),
-            ),
-        );
-
-        return flags;
-    }
-
-    applyFlags(flagObj, outputDir) {
-        const functionSearchPattern = `${this.config.flagFunction}(_str, _bool)`;
-
-        _.forEach(this.files, ({ fileName, source }) => {
-            const result = grasp.replace('equery', functionSearchPattern,
-                (getRaw, node) => JSON.stringify(flagObj[node.arguments[0].value]),
-                source,
-            );
+    applyFlagsToAllFiles(flagObj, outputDir) {
+        _.forEach(this.files, (fileObj) => {
+            const result = this.applyFlagsToFile(fileObj, flagObj);
 
             fs.writeFileSync(
-                path.join(outputDir, fileName),
+                path.join(outputDir, fileObj.fileName),
                 result,
             );
         });
+    }
+
+    applyFlagsToFile(fileObj, flagObj) {
+        const functionSearchPattern = `${this.config.flagFunction}(_str, _bool)`;
+        const result = grasp.replace('equery', functionSearchPattern,
+            (getRaw, node) => JSON.stringify(flagObj[node.arguments[0].value]),
+            fileObj.source,
+        );
+
+        return result;
     }
 }

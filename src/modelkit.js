@@ -6,44 +6,40 @@ import { getBooleanFlagPermutations, sortFlags } from './utils/flag-utils';
 
 export default class Modelkit {
     run(config) {
-        // Copy the way to handle plugins and provide events from webpack. Later.
+        const state = {
+            config,
+        };
 
-        this.readFiles(config);
-        const flags = this.getFlags(config);
+        // TODO: refactor. Extract files reading from fs here.
+        state.files = this.readFiles(config);
+        state.flags = this.getFlags(state);
+
+        // Extract permutations into plugin.
         const freezeFlags = this.getFreezeFlags(config.plugins);
-        const flagPermutations = getBooleanFlagPermutations(flags, freezeFlags);
-
-        // TODO: allow plugins to sort flags the way they want
-        const sortedFlags = sortFlags(flagPermutations);
+        state.flagPermutations = sortFlags(getBooleanFlagPermutations(state.flags, freezeFlags));
+        state.flagPermutationDirectories = _.map(
+            state.flagPermutations,
+            (flagObj, flagIndex) => this.getDirectoryByFlag({ flagObj, flagIndex, config }),
+        );
 
         mkdirp(config.outputDir);
 
-        // Write a plugin that will create a manifest file.
-        const featureFlagsToDirectoryMap = _.map(sortedFlags, (flagObj, flagIndex) =>
-            ({
-                flags: flagObj,
-                directory: this.getDirectoryByFlag({ flagObj, flagIndex, config }),
-            }),
-        );
+        _.forEach(_.filter(config.plugins.filter(i => i.getManifest)), i => i.getManifest(state));
 
-        fs.writeFileSync(
-            path.join(config.outputDir, 'mapping.json'),
-            JSON.stringify(featureFlagsToDirectoryMap, null, 2),
-        );
-
-        _.forEach(sortedFlags, (flagObj, flagIndex) => {
-            this.applyFlags({ flagObj, flagIndex, config });
+        _.forEach(state.flagPermutations, (flagObj, flagIndex) => {
+            this.applyFlagsToAllFiles({ flagObj, flagIndex, config });
         });
     }
 
-    applyFlags({ flagObj, flagIndex, config }) {
+    applyFlagsToAllFiles({ flagObj, flagIndex, config }) {
+        // TODO: refactor. Extract files writing here.
         const flagCopy = Object.assign({}, flagObj);
         // TODO: allow plugins to provide additional replacements in filename
         const flagDirectory = this.getDirectoryByFlag({ flagObj, flagIndex, config });
         const outputDir = path.join(config.outputDir, flagDirectory);
 
         mkdirp(outputDir);
-        _.forEach(config.input, i => i.applyFlags(flagCopy, outputDir));
+        _.forEach(config.input, i => i.applyFlagsToAllFiles(flagCopy, outputDir));
     }
 
     getDirectoryByFlag({ flagIndex, config }) {
@@ -52,26 +48,22 @@ export default class Modelkit {
         return result;
     }
 
-    getFlags(config) {
+    getFlags(state) {
         // we support only boolean flags for now
         // hence union and returning flag names only works fine
-        const flags = _.union(
-            _.flatten(
-                _.map(config.input, i => i.getFlags()),
-            ),
-        );
-
+        const flags = _.union(_.flatten(_.map(state.files, file => file.flags)));
         return flags;
     }
 
     readFiles(config) {
-        _.forEach(config.input, i => i.readFiles(config.inputDir));
+        const files = _.flatten(_.map(config.input, loader => loader.readFiles(config.inputDir)));
+        return files;
     }
 
     getFreezeFlags(input) {
         // TODO: check if there are different values assigned for the same flags.
         // Throw if there are.
-        const freezeFlags = _.map(input, i => i.getFreezeFlags());
+        const freezeFlags = _.map(_.filter(input, i => i.getFreezeFlags), i => i.getFreezeFlags());
 
         const uniqueFreezeFlags = _.reduce(
             freezeFlags,

@@ -46,7 +46,8 @@ export default class YarnLoader {
     }
 
     readFiles(inputDir) {
-        this.files = _.map(this.config.files, (fileName) => {
+        const flags = _.map(this.config.changes, i => i.flag);
+        const files = _.map(this.config.files, (fileName) => {
             const filePath = path.join(inputDir, fileName);
             const source = fs.readFileSync(filePath, 'utf8')
                 .replace(/\r\n/g, '\n'); // important for yarn parser
@@ -54,46 +55,53 @@ export default class YarnLoader {
             return {
                 fileName,
                 filePath,
+                flags,
                 source,
             };
         });
+
+        this.files = files;
+
+        return files;
     }
 
-    getFlags() {
-        const flags = _.map(this.config.changes, i => i.flag);
-
-        return flags;
-    }
-
-    applyFlags(flagObj, outputDir) {
-        _.forEach(this.files, ({ fileName, filePath, source }) => {
-            let json = parse(source, filePath);
-            json = _.reduce(flagObj, (agg, value, key) => {
-                if (!value) {
-                    return agg;
-                }
-
-                const changes = _.filter(this.config.changes, i => i.flag === key)[0];
-
-                if (typeof changes === 'undefined') {
-                    return agg;
-                }
-
-                if (changes.delete) {
-                    deleteProperty(agg, changes.delete);
-                }
-
-                if (changes.update) {
-                    updateProperty(agg, changes.update);
-                }
-
-                return agg;
-            }, json);
-
+    applyFlagsToAllFiles(flagObj, outputDir) {
+        _.forEach(this.files, (fileObj) => {
+            const result = this.applyFlagsToFile(fileObj, flagObj);
             fs.writeFileSync(
-                path.join(outputDir, fileName),
-                stringify(json, false),
+                path.join(outputDir, fileObj.fileName),
+                result,
             );
         });
+    }
+
+    applyFlagsToFile(fileObj, flagObj) {
+        let json = parse(fileObj.source, fileObj.filePath);
+
+        json = _.reduce(flagObj, (agg, value, key) => {
+            if (!value) {
+                return agg;
+            }
+
+            const changes = _.filter(this.config.changes, i => i.flag === key)[0];
+
+            if (typeof changes === 'undefined') {
+                return agg;
+            }
+
+            if (changes.delete) {
+                deleteProperty(agg, changes.delete);
+            }
+
+            if (changes.update) {
+                updateProperty(agg, changes.update);
+            }
+
+            return agg;
+        }, json);
+
+        const result = stringify(json, false);
+
+        return result;
     }
 }

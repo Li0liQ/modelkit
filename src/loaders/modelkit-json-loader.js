@@ -44,54 +44,63 @@ export default class JsonLoader {
     }
 
     readFiles(inputDir) {
-        this.files = _.map(this.config.files, (fileName) => {
+        const flags = _.map(this.config.changes, i => i.flag);
+
+        const files = _.map(this.config.files, (fileName) => {
             const filePath = path.join(inputDir, fileName);
             const source = fs.readFileSync(filePath, 'utf8');
 
             return {
                 fileName,
                 filePath,
+                flags,
                 source,
             };
         });
+
+        this.files = files;
+
+        return files;
     }
 
-    getFlags() {
-        const flags = _.map(this.config.changes, i => i.flag);
-
-        return flags;
-    }
-
-    applyFlags(flagObj, outputDir) {
-        _.forEach(this.files, ({ fileName, source }) => {
-            let json = JSON.parse(source);
-
-            json = _.reduce(flagObj, (agg, value, key) => {
-                if (!value) {
-                    return agg;
-                }
-
-                const changes = _.filter(this.config.changes, i => i.flag === key)[0];
-
-                if (typeof changes === 'undefined') {
-                    return agg;
-                }
-
-                if (changes.delete) {
-                    deleteProperty(agg, changes.delete);
-                }
-
-                if (changes.update) {
-                    updateProperty(agg, changes.update);
-                }
-
-                return agg;
-            }, json);
+    applyFlagsToAllFiles(flagObj, outputDir) {
+        _.forEach(this.files, (fileObj) => {
+            const result = this.applyFlagsToFile(fileObj, flagObj);
 
             fs.writeFileSync(
-                path.join(outputDir, fileName),
-                JSON.stringify(json, null, 2),
+                path.join(outputDir, fileObj.fileName),
+                result,
             );
         });
+    }
+
+    applyFlagsToFile(fileObj, flagObj) {
+        let json = JSON.parse(fileObj.source);
+
+        json = _.reduce(flagObj, (agg, value, key) => {
+            if (!value) {
+                return agg;
+            }
+
+            const changes = _.filter(this.config.changes, i => i.flag === key)[0];
+
+            if (typeof changes === 'undefined') {
+                return agg;
+            }
+
+            if (changes.delete) {
+                deleteProperty(agg, changes.delete);
+            }
+
+            if (changes.update) {
+                updateProperty(agg, changes.update);
+            }
+
+            return agg;
+        }, json);
+
+        const result = JSON.stringify(json, null, 2);
+
+        return result;
     }
 }
