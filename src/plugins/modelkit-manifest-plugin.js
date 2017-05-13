@@ -7,16 +7,16 @@ export default class ManifestPlugin {
         this.config = config;
     }
 
-    getManifest(state) {
-        const featureFlagsToDirectoryMap = _.map(state.flagPermutations, (flagObj, flagIndex) =>
+    afterEnd(context) {
+        const featureFlagsToDirectoryMap = _.map(context.flagPermutations, (flagObj, flagIndex) =>
             ({
                 flags: flagObj,
-                directory: state.flagPermutationDirectories[flagIndex],
+                directory: context.flagPermutationDirectories[flagIndex],
             }),
         );
 
         fs.writeFileSync(
-            path.join(state.config.outputDir, this.config.file),
+            path.join(context.config.outputDir, this.config.file),
             JSON.stringify(featureFlagsToDirectoryMap, null, 2),
         );
     }

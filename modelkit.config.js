@@ -2,7 +2,6 @@ const path = require('path');
 const ModelkitJsonLoader = require('./lib/modelkit').ModelkitJsonLoader;
 const ModelkitJsLoader = require('./lib/modelkit').ModelkitJsLoader;
 const ModelkitYarnLoader = require('./lib/modelkit').ModelkitYarnLoader;
-const ModelkitFreezePlugin = require('./lib/modelkit').ModelkitFreezePlugin;
 const ModelkitManifestPlugin = require('./lib/modelkit').ModelkitManifestPlugin;
 
 module.exports = {
@@ -79,15 +78,13 @@ module.exports = {
     ],
     outputDir: path.join(__dirname, 'output'),
     flagDirName: 'build-[id]',
+    freezeFlags: {
+        'js-1': true,
+        'json-1': true,
+        'common-1': true,
+        'yarn-1': true,
+    },
     plugins: [
-        new ModelkitFreezePlugin({
-            flags: {
-                'js-1': true,
-                'json-1': true,
-                'common-1': true,
-                'yarn-1': true,
-            },
-        }),
         new ModelkitManifestPlugin({
             file: 'manifest.json',
         }),

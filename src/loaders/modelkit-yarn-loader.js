@@ -38,7 +38,7 @@ const updateProperty = (obj, pattern) => {
     });
 };
 
-export default class YarnLoader extends BaseLoader{
+export default class YarnLoader extends BaseLoader {
     constructor(config) {
         super(config);
         this.changes = config.changes;

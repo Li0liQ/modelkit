@@ -10,17 +10,19 @@ export default class Modelkit {
             config,
         };
 
+        this.triggerPluginsMethod('beforeStart', context);
+
         context.files = this.readFiles(config);
         this.assignLoadersToFiles(config.loaders, context.files);
         this.readFileFlags(context.files);
 
         context.flags = this.getAllFlags(context.files);
 
-        // Extract permutations into a plugin.
-        const freezeFlags = this.getFreezeFlags(config.plugins);
+        // Extract permutations into a plugin. Maybe.
         context.flagPermutations = sortFlags(
-            getBooleanFlagPermutations(context.flags, freezeFlags),
+            getBooleanFlagPermutations(context.flags, config.freezeFlags),
         );
+
         context.flagPermutationDirectories = _.map(
             context.flagPermutations,
             (flagObj, flagIndex) => this.getDirectoryByFlag({ flagObj, flagIndex, config }),
@@ -28,9 +30,17 @@ export default class Modelkit {
 
         mkdirp(config.outputDir);
 
-        _.forEach(_.filter(config.plugins.filter(i => i.getManifest)), i => i.getManifest(context));
-
         this.applyFlagsToAllFilesAndWrite(config, context);
+
+        this.triggerPluginsMethod('afterEnd', context);
+    }
+
+    triggerPluginsMethod(methodName, context) {
+        _.forEach(context.plugins, (plugin) => {
+            if (_.isFunction(plugin[methodName])) {
+                plugin[methodName](context);
+            }
+        });
     }
 
     applyFlagsToAllFilesAndWrite(config, context) {
@@ -97,20 +107,6 @@ export default class Modelkit {
         });
 
         return fileList;
-    }
-
-    getFreezeFlags(input) {
-        // TODO: check if there are different values assigned for the same flags.
-        // Throw if there are.
-        const freezeFlags = _.map(_.filter(input, i => i.getFreezeFlags), i => i.getFreezeFlags());
-
-        const uniqueFreezeFlags = _.reduce(
-            freezeFlags,
-            (agg, i) => Object.assign(agg, i),
-            {},
-        );
-
-        return uniqueFreezeFlags;
     }
 
     assignLoadersToFiles(loaders, files) {
