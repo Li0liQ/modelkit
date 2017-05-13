@@ -1,9 +1,7 @@
 import * as _ from 'lodash';
-import fs from 'fs';
-import path from 'path';
-import isPlainObject from 'lodash/isPlainObject';
 import parse from 'yarn/lib/lockfile/parse';
 import stringify from 'yarn/lib/lockfile/stringify';
+import BaseLoader from './modelkit-base-loader';
 
 // No array support atm.
 const deleteProperty = (obj, pattern) => {
@@ -14,7 +12,7 @@ const deleteProperty = (obj, pattern) => {
             return;
         }
 
-        if (isPlainObject(value) && isPlainObject(subObj)) {
+        if (_.isPlainObject(value) && _.isPlainObject(subObj)) {
             deleteProperty(subObj, value);
         } else {
             delete obj[key];
@@ -32,7 +30,7 @@ const updateProperty = (obj, pattern) => {
             return;
         }
 
-        if (isPlainObject(value) && isPlainObject(subObj)) {
+        if (_.isPlainObject(value) && _.isPlainObject(subObj)) {
             updateProperty(subObj, value);
         } else {
             obj[key] = value;
@@ -40,50 +38,28 @@ const updateProperty = (obj, pattern) => {
     });
 };
 
-export default class YarnLoader {
+export default class YarnLoader extends BaseLoader{
     constructor(config) {
-        this.config = config;
+        super(config);
+        this.changes = config.changes;
     }
 
-    readFiles(inputDir) {
-        const flags = _.map(this.config.changes, i => i.flag);
-        const files = _.map(this.config.files, (fileName) => {
-            const filePath = path.join(inputDir, fileName);
-            const source = fs.readFileSync(filePath, 'utf8')
-                .replace(/\r\n/g, '\n'); // important for yarn parser
+    readFileFlags() {
+        const flags = _.map(this.changes, i => i.flag);
 
-            return {
-                fileName,
-                filePath,
-                flags,
-                source,
-            };
-        });
-
-        this.files = files;
-
-        return files;
+        return flags;
     }
 
-    applyFlagsToAllFiles(flagObj, outputDir) {
-        _.forEach(this.files, (fileObj) => {
-            const result = this.applyFlagsToFile(fileObj, flagObj);
-            fs.writeFileSync(
-                path.join(outputDir, fileObj.fileName),
-                result,
-            );
-        });
-    }
+    getFileSourceWithFlags(file, flags) {
+        const source = file.source.replace(/\r\n/g, '\n'); // important for yarn parser
+        let json = parse(source, file.filePath);
 
-    applyFlagsToFile(fileObj, flagObj) {
-        let json = parse(fileObj.source, fileObj.filePath);
-
-        json = _.reduce(flagObj, (agg, value, key) => {
+        json = _.reduce(flags, (agg, value, key) => {
             if (!value) {
                 return agg;
             }
 
-            const changes = _.filter(this.config.changes, i => i.flag === key)[0];
+            const changes = _.filter(this.changes, i => i.flag === key)[0];
 
             if (typeof changes === 'undefined') {
                 return agg;

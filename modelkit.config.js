@@ -7,7 +7,8 @@ const ModelkitManifestPlugin = require('./lib/modelkit').ModelkitManifestPlugin;
 
 module.exports = {
     inputDir: path.join(__dirname, 'input'),
-    input: [
+    // we load and try to process all the files from the folder atm
+    loaders: [
         new ModelkitJsonLoader({
             files: ['package.json'],
             changes: [{

@@ -6,40 +6,53 @@ import { getBooleanFlagPermutations, sortFlags } from './utils/flag-utils';
 
 export default class Modelkit {
     run(config) {
-        const state = {
+        const context = {
             config,
         };
 
-        // TODO: refactor. Extract files reading from fs here.
-        state.files = this.readFiles(config);
-        state.flags = this.getFlags(state);
+        context.files = this.readFiles(config);
+        this.assignLoadersToFiles(config.loaders, context.files);
+        this.readFileFlags(context.files);
 
-        // Extract permutations into plugin.
+        context.flags = this.getAllFlags(context.files);
+
+        // Extract permutations into a plugin.
         const freezeFlags = this.getFreezeFlags(config.plugins);
-        state.flagPermutations = sortFlags(getBooleanFlagPermutations(state.flags, freezeFlags));
-        state.flagPermutationDirectories = _.map(
-            state.flagPermutations,
+        context.flagPermutations = sortFlags(
+            getBooleanFlagPermutations(context.flags, freezeFlags),
+        );
+        context.flagPermutationDirectories = _.map(
+            context.flagPermutations,
             (flagObj, flagIndex) => this.getDirectoryByFlag({ flagObj, flagIndex, config }),
         );
 
         mkdirp(config.outputDir);
 
-        _.forEach(_.filter(config.plugins.filter(i => i.getManifest)), i => i.getManifest(state));
+        _.forEach(_.filter(config.plugins.filter(i => i.getManifest)), i => i.getManifest(context));
 
-        _.forEach(state.flagPermutations, (flagObj, flagIndex) => {
-            this.applyFlagsToAllFiles({ flagObj, flagIndex, config });
-        });
+        this.applyFlagsToAllFilesAndWrite(config, context);
     }
 
-    applyFlagsToAllFiles({ flagObj, flagIndex, config }) {
-        // TODO: refactor. Extract files writing here.
-        const flagCopy = Object.assign({}, flagObj);
-        // TODO: allow plugins to provide additional replacements in filename
-        const flagDirectory = this.getDirectoryByFlag({ flagObj, flagIndex, config });
-        const outputDir = path.join(config.outputDir, flagDirectory);
+    applyFlagsToAllFilesAndWrite(config, context) {
+        _.forEach(context.flagPermutations, (flagObj, flagIndex) => {
+            const flagCopy = Object.assign({}, flagObj);
+            // TODO: allow plugins to provide additional replacements in filename
+            const flagDirectory = this.getDirectoryByFlag({ flagObj, flagIndex, config });
+            const outputDir = path.join(config.outputDir, flagDirectory);
 
-        mkdirp(outputDir);
-        _.forEach(config.input, i => i.applyFlagsToAllFiles(flagCopy, outputDir));
+            mkdirp(outputDir);
+
+            _.forEach(context.files, (file) => {
+                if (file.loader) {
+                    file.source = file.loader.getFileSourceWithFlags(file, flagCopy);
+                }
+
+                fs.writeFileSync(
+                    path.join(outputDir, file.fileName),
+                    file.source,
+                );
+            });
+        });
     }
 
     getDirectoryByFlag({ flagIndex, config }) {
@@ -48,16 +61,42 @@ export default class Modelkit {
         return result;
     }
 
-    getFlags(state) {
+    readFileFlags(files) {
+        _.each(files, (file) => {
+            if (file.loader) {
+                file.flags = file.loader.readFileFlags(file);
+            }
+        });
+    }
+
+    getAllFlags(files) {
         // we support only boolean flags for now
         // hence union and returning flag names only works fine
-        const flags = _.union(_.flatten(_.map(state.files, file => file.flags)));
+        const flags = _.union(_.flatten(_.map(files, file => file.flags)));
         return flags;
     }
 
     readFiles(config) {
-        const files = _.flatten(_.map(config.input, loader => loader.readFiles(config.inputDir)));
-        return files;
+        const filePathList = _.filter(
+            _.map(
+                fs.readdirSync(config.inputDir),
+                fileName => path.join(config.inputDir, fileName),
+            ),
+            filePath => fs.statSync(filePath).isFile(),
+        );
+
+        const fileList = _.map(filePathList, (filePath) => {
+            const source = fs.readFileSync(filePath, 'utf8');
+            const fileName = path.basename(filePath);
+
+            return {
+                fileName,
+                filePath,
+                source,
+            };
+        });
+
+        return fileList;
     }
 
     getFreezeFlags(input) {
@@ -72,5 +111,17 @@ export default class Modelkit {
         );
 
         return uniqueFreezeFlags;
+    }
+
+    assignLoadersToFiles(loaders, files) {
+        _.each(files, file => _.each(loaders, (loader) => {
+            if (loader.test.test(file.fileName)) {
+                if (file.loader) {
+                    throw new Error(`File ${file.fileName} has more than one loader matching it. Please, fix config.`);
+                }
+
+                file.loader = loader;
+            }
+        }));
     }
 }
