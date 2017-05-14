@@ -11,4 +11,7 @@ node_modules/
 # Yarn Integrity file
 .yarn-integrity
 
+# Caches
+.fusebox/
+
 output/
