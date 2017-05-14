@@ -1,4 +1,7 @@
 language: node_js
 node_js:
   - 7
+script:
+  - yarn build
+  - npm test
 cache: yarn
