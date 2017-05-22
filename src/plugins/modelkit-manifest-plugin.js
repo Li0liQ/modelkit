@@ -8,10 +8,10 @@ export default class ManifestPlugin {
     }
 
     afterEnd(context) {
-        const featureFlagsToDirectoryMap = _.map(context.flagPermutations, (flagObj, flagIndex) =>
+        const featureFlagsToDirectoryMap = _.map(context.output, ({ flags, directory }) =>
             ({
-                flags: flagObj,
-                directory: context.flagPermutationDirectories[flagIndex],
+                flags,
+                directory,
             }),
         );
 

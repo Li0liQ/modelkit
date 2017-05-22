@@ -2,13 +2,15 @@ import * as _ from 'lodash';
 import path from 'path';
 import fs from 'fs';
 import mkdirp from 'mkdirp';
-import { getBooleanFlagPermutations, sortFlags } from './utils/flag-utils';
+import { getBooleanFlagPermutations } from './utils/flag-utils';
 
 export default class Modelkit {
     run(config) {
         const context = {
             config,
         };
+
+        context.plugins = config.plugins;
 
         this.triggerPluginsMethod('beforeStart', context);
 
@@ -18,19 +20,13 @@ export default class Modelkit {
 
         context.flags = this.getAllFlags(context.files);
 
-        // Extract permutations into a plugin. Maybe.
-        context.flagPermutations = sortFlags(
-            getBooleanFlagPermutations(context.flags, config.freezeFlags),
-        );
+        context.flagPermutations = getBooleanFlagPermutations(context.flags, config.freezeFlags);
 
-        context.flagPermutationDirectories = _.map(
-            context.flagPermutations,
-            (flagObj, flagIndex) => this.getDirectoryByFlag({ flagObj, flagIndex, config }),
-        );
+        context.output = this.generateOutput(config, context);
 
-        mkdirp(config.outputDir);
+        this.triggerPluginsMethod('afterGenerateOutput', context);
 
-        this.applyFlagsToAllFilesAndWrite(config, context);
+        this.flushOutput(config, context);
 
         this.triggerPluginsMethod('afterEnd', context);
     }
@@ -43,25 +39,38 @@ export default class Modelkit {
         });
     }
 
-    applyFlagsToAllFilesAndWrite(config, context) {
-        _.forEach(context.flagPermutations, (flagObj, flagIndex) => {
-            const flagCopy = Object.assign({}, flagObj);
+    generateOutput(config, context) {
+        // for every permutation generate { folder, files }
+        const result = _.map(context.flagPermutations, (flagObj, flagIndex) => {
+            const outputItem = {};
             // TODO: allow plugins to provide additional replacements in filename
             const flagDirectory = this.getDirectoryByFlag({ flagObj, flagIndex, config });
-            const outputDir = path.join(config.outputDir, flagDirectory);
+            outputItem.directory = path.join(config.outputDir, flagDirectory);
+            outputItem.flags = Object.assign({}, flagObj);
+            outputItem.files = _.map(context.files, file => Object.assign({}, file, {
+                parent: file,
+                source: file.loader
+                    ? file.loader.getFileSourceWithFlags(file, outputItem.flags)
+                    : file.source,
+                filePath: path.join(outputItem.directory, file.fileName),
+            }));
 
-            mkdirp(outputDir);
+            return outputItem;
+        });
 
-            _.forEach(context.files, (file) => {
-                if (file.loader) {
-                    file.source = file.loader.getFileSourceWithFlags(file, flagCopy);
-                }
+        return result;
+    }
 
-                fs.writeFileSync(
-                    path.join(outputDir, file.fileName),
+    flushOutput(config, context) {
+        mkdirp(config.outputDir);
+
+        _.forEach(context.output, ({ directory, files }) => {
+            mkdirp(directory);
+            _.forEach(files, file => fs.writeFileSync(
+                    file.filePath,
                     file.source,
-                );
-            });
+                ),
+            );
         });
     }
 
@@ -82,7 +91,15 @@ export default class Modelkit {
     getAllFlags(files) {
         // we support only boolean flags for now
         // hence union and returning flag names only works fine
-        const flags = _.union(_.flatten(_.map(files, file => file.flags)));
+        const flags = _.union(
+            _.flatten(
+                _.map(
+                    _.filter(files, file => file.flags),
+                    file => file.flags,
+                ),
+            ),
+        );
+
         return flags;
     }
 

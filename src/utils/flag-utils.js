@@ -35,6 +35,3 @@ export const getBooleanFlagPermutations = (flagList, freezeFlags = {}) => {
 
     return resultList;
 };
-
-// TODO: sort flags
-export const sortFlags = i => i;
