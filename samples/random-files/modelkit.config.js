@@ -1,11 +1,11 @@
 const path = require('path');
-const ModelkitJsonLoader = require('./lib/modelkit').ModelkitJsonLoader;
-const ModelkitJsLoader = require('./lib/modelkit').ModelkitJsLoader;
-const ModelkitYarnLoader = require('./lib/modelkit').ModelkitYarnLoader;
-const ModelkitManifestPlugin = require('./lib/modelkit').ModelkitManifestPlugin;
+const ModelkitJsonLoader = require('./../../lib/modelkit').ModelkitJsonLoader;
+const ModelkitJsLoader = require('./../../lib/modelkit').ModelkitJsLoader;
+const ModelkitYarnLoader = require('./../../lib/modelkit').ModelkitYarnLoader;
+const ModelkitManifestPlugin = require('./../../lib/modelkit').ModelkitManifestPlugin;
 
 module.exports = {
-    inputDir: path.join(__dirname, 'input'),
+    inputDir: path.join(__dirname),
     // we load and try to process all the files from the folder atm
     loaders: [
         new ModelkitJsonLoader({
